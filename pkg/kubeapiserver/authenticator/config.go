@@ -64,6 +64,7 @@ type Config struct {
 	OIDCGroupsPrefix            string
 	OIDCSigningAlgs             []string
 	OIDCRequiredClaims          map[string]string
+	OIDCExtraClaims             []string
 	ServiceAccountKeyFiles      []string
 	ServiceAccountLookup        bool
 	ServiceAccountIssuers       []string
@@ -174,6 +175,7 @@ func (config Config) New() (authenticator.Request, *spec.SecurityDefinitions, er
 			GroupsPrefix:         config.OIDCGroupsPrefix,
 			SupportedSigningAlgs: config.OIDCSigningAlgs,
 			RequiredClaims:       config.OIDCRequiredClaims,
+			ExtraClaims:          config.OIDCExtraClaims,
 		})
 		if err != nil {
 			return nil, nil, err

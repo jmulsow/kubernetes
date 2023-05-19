@@ -118,6 +118,10 @@ type Options struct {
 	// required claims key value pairs are present in the ID Token.
 	RequiredClaims map[string]string
 
+	// ExtraClaims, if specified, causes the OIDCAuthenticator to populate the user's extra
+	// with the values from each of these claims.
+	ExtraClaims []string
+
 	// now is used for testing. It defaults to time.Now.
 	now func() time.Time
 }
@@ -208,6 +212,8 @@ type Authenticator struct {
 
 	// resolver is used to resolve distributed claims.
 	resolver *claimResolver
+
+	extraClaims []string
 }
 
 func (a *Authenticator) setVerifier(v *oidc.IDTokenVerifier) {
@@ -321,6 +327,7 @@ func New(opts Options) (*Authenticator, error) {
 		requiredClaims: opts.RequiredClaims,
 		cancel:         cancel,
 		resolver:       resolver,
+		extraClaims:    opts.ExtraClaims,
 	}
 
 	if opts.KeySet != nil {
@@ -636,6 +643,23 @@ func (a *Authenticator) AuthenticateToken(ctx context.Context, token string) (*a
 		if claimValue != value {
 			return nil, false, fmt.Errorf("oidc: required claim %s value does not match. Got = %s, want = %s", claim, claimValue, value)
 		}
+	}
+
+	extra := make(map[string][]string)
+	for _, claim := range a.extraClaims {
+		if _, ok := c[claim]; ok {
+			// Support either a single string or array.
+			var claimValue stringOrArray
+			if err := c.unmarshalClaim(claim, &claimValue); err != nil {
+				return nil, false, fmt.Errorf("oidc: parse claim %s: %v", claim, err)
+			}
+			extra[claim] = []string(claimValue)
+		} else {
+			klog.Info("OIDC: Extra claim %s is not present in ID token.", claim)
+		}
+	}
+	if len(extra) > 0 {
+		info.Extra = extra
 	}
 
 	return &authenticator.Response{User: info}, true, nil

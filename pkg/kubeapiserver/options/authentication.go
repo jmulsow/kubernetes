@@ -80,6 +80,7 @@ type OIDCAuthenticationOptions struct {
 	GroupsPrefix   string
 	SigningAlgs    []string
 	RequiredClaims map[string]string
+	ExtraClaims    []string
 }
 
 // ServiceAccountAuthenticationOptions contains service account authentication options for API Server
@@ -309,6 +310,10 @@ func (o *BuiltInAuthenticationOptions) AddFlags(fs *pflag.FlagSet) {
 			"A key=value pair that describes a required claim in the ID Token. "+
 			"If set, the claim is verified to be present in the ID Token with a matching value. "+
 			"Repeat this flag to specify multiple claims.")
+
+		fs.StringSliceVar(&o.OIDC.ExtraClaims, "oidc-extra-claims", o.OIDC.ExtraClaims, ""+
+			"If provided, a comma-separated list of OpenID Connect claims for specifying extra claims "+
+			"which hold additional information that authorizers may find useful.")
 	}
 
 	if o.RequestHeader != nil {
@@ -407,6 +412,7 @@ func (o *BuiltInAuthenticationOptions) ToAuthenticationConfig() (kubeauthenticat
 		ret.OIDCUsernamePrefix = o.OIDC.UsernamePrefix
 		ret.OIDCSigningAlgs = o.OIDC.SigningAlgs
 		ret.OIDCRequiredClaims = o.OIDC.RequiredClaims
+		ret.OIDCExtraClaims = o.OIDC.ExtraClaims
 	}
 
 	if o.RequestHeader != nil {

@@ -1472,6 +1472,57 @@ func TestToken(t *testing.T) {
 			}`, valid.Unix()),
 			wantErr: `oidc: verify token: oidc: expected audience "my-client" got ["my-wrong-client"]`,
 		},
+		{
+			name: "extraClaims",
+			options: Options{
+				IssuerURL:     "https://auth.example.com",
+				ClientID:      "my-client",
+				UsernameClaim: "username",
+				ExtraClaims:   []string{"claim-1", "claim-2"},
+				now:           func() time.Time { return now },
+			},
+			signingKey: loadRSAPrivKey(t, "testdata/rsa_1.pem", jose.RS256),
+			pubKeys: []*jose.JSONWebKey{
+				loadRSAKey(t, "testdata/rsa_1.pem", jose.RS256),
+			},
+			claims: fmt.Sprintf(`{
+				"iss": "https://auth.example.com",
+				"aud": "my-client",
+				"username": "jane",
+				"claim-1": ["extra-1-a", "extra-1-b"],
+				"claim-2": "extra-2",
+				"exp": %d
+			}`, valid.Unix()),
+			want: &user.DefaultInfo{
+				Name:  "jane",
+				Extra: map[string][]string{"claim-1": []string{"extra-1-a", "extra-1-b"}, "claim-2": []string{"extra-2"}},
+			},
+		},
+		{
+			name: "extraClaims not present in ID token",
+			options: Options{
+				IssuerURL:     "https://auth.example.com",
+				ClientID:      "my-client",
+				UsernameClaim: "username",
+				ExtraClaims:   []string{"claim-1", "claim-2"},
+				now:           func() time.Time { return now },
+			},
+			signingKey: loadRSAPrivKey(t, "testdata/rsa_1.pem", jose.RS256),
+			pubKeys: []*jose.JSONWebKey{
+				loadRSAKey(t, "testdata/rsa_1.pem", jose.RS256),
+			},
+			claims: fmt.Sprintf(`{
+				"iss": "https://auth.example.com",
+				"aud": "my-client",
+				"username": "jane",
+				"claim-1": ["extra-1-a", "extra-1-b"],
+				"exp": %d
+			}`, valid.Unix()),
+			want: &user.DefaultInfo{
+				Name:  "jane",
+				Extra: map[string][]string{"claim-1": []string{"extra-1-a", "extra-1-b"}},
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, test.run)
